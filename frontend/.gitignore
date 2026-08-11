@@ -6,3 +6,4 @@ playwright/.cache/
 playwright-report/
 test-results/
 public/audio/*.wav
+.local/hand-reference-samples/

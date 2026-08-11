@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/experimental-ct-react';
 import { HandSprite } from './HandSprite';
 
-test('renders each hand from inline pixel data', async ({ mount }) => {
+test('renders each hand from inline LED path data', async ({ mount }) => {
   const component = await mount(
     <div>
       <HandSprite hand="rock" />

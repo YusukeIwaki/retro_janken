@@ -64,11 +64,20 @@ export function GameScreen({ dependencies }: GameScreenProps) {
   const canStart = cameraStatus === 'ready' && state.phase === 'idle';
 
   return (
-    <main className="game-screen">
+    <main className={`game-screen game-screen--${state.phase}`}>
       <div className="crt-frame">
+        <div className="cabinet-beacon" aria-hidden="true">
+          <span className="cabinet-beacon__light" />
+          <span className="cabinet-beacon__base" />
+        </div>
+
         <header className="game-screen__header">
-          <p className="game-screen__eyebrow">VIDEO GAME</p>
-          <h1>ジャンケン マシーン</h1>
+          <p className="game-screen__eyebrow">SANWISE MEDAL GAME</p>
+          <h1>
+            <span>ジャンケンマン</span>
+            <small>JACK POT</small>
+          </h1>
+          <p className="game-screen__tagline">じゃんけんに かって メダルを ふやそう！</p>
         </header>
 
         <div className="game-screen__cabinet">
@@ -94,9 +103,8 @@ export function GameScreen({ dependencies }: GameScreenProps) {
                 </p>
               )}
             </div>
-            <p className="camera-panel__instruction">
-              わくの中に手を出してね
-            </p>
+            <p className="camera-panel__label">HAND CAMERA</p>
+            <p className="camera-panel__instruction">わくの中に 手を出してね</p>
             {cameraError !== null && (
               <p className="camera-panel__error" role="alert">
                 {cameraError}
@@ -105,17 +113,31 @@ export function GameScreen({ dependencies }: GameScreenProps) {
           </aside>
         </div>
 
-        <button
-          className="start-button"
-          disabled={!canStart}
-          onClick={startGame}
-          type="button"
-        >
-          {state.phase === 'idle' ? 'スタート' : 'しょうぶ中'}
-        </button>
-        <p className="game-screen__hint">
-          カメラの使用を許可して、スタートを押してください
-        </p>
+        <div className="control-deck">
+          <div className="control-deck__button control-deck__button--return" aria-hidden="true">
+            <span />
+            メダルもどし
+          </div>
+          <div className="control-deck__start">
+            <button
+              className="start-button"
+              disabled={!canStart}
+              onClick={startGame}
+              type="button"
+            >
+              {state.phase === 'idle' ? 'スタート' : 'しょうぶ中'}
+            </button>
+            <span>このボタンを おしてね</span>
+          </div>
+          <div className="control-deck__button control-deck__button--camera" aria-hidden="true">
+            <span />
+            カメラしょうぶ
+          </div>
+        </div>
+
+        <footer className="game-screen__footer">
+          <p className="game-screen__hint">カメラを許可して、手をわくの中に出してね</p>
+        </footer>
       </div>
     </main>
   );
