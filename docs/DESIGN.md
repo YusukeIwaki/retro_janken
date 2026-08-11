@@ -95,10 +95,11 @@ idle ──(スタート)──> calling ──(掛け声完了)──> capturin
 ```
 POST /api/classify
   Content-Type: multipart/form-data; フィールド名 "image" (JPEG/PNG)
-  200 → { "hand": "rock" | "scissors" | "paper", "confidence": 0.0-1.0, "latency_ms": number }
+  200 → { "hand": "rock" | "scissors" | "paper" | null, "confidence": 0.0-1.0, "latency_ms": number }
+        hand が null のときは「画像内に手が検出できなかった」ことを表す (confidence は 0.0)
   400 → { "detail": "..." }  (画像がデコード不能など)
 GET /api/health
-  200 → { "status": "ok", "classifier": "cnn" | "stub" }
+  200 → { "status": "ok", "classifier": "landmark" | "cnn" | "stub" }
 ```
 
 - CORS: `http://localhost:5173` を許可(開発用)。
@@ -108,17 +109,38 @@ GET /api/health
 ```python
 class Classifier(Protocol):
     name: str
-    def classify(self, image: PIL.Image.Image) -> tuple[Hand, float]: ...
+    def classify(self, image: PIL.Image.Image) -> tuple[Hand | None, float]: ...
 ```
 
-- `CnnClassifier`: `backend/models/rps_cnn.keras` をロード。起動時 1 回ロードし、
-  ウォームアップ推論を 1 回実行してから受け付ける(初回リクエストの遅延回避)。
-- `StubClassifier`: モデルファイルが無い場合・`RPS_CLASSIFIER=stub` の場合に使用。
-  画像バイト列のハッシュから決定的に手を返す(テストの再現性のため)。
-- **API のテストは stub で実行し、TensorFlow 無しで pytest が通ること**
-  (TF は optional dependency group `[ml]` に分離。`uv sync --group ml` で学習環境を構築)。
+判定器は 3 種類。優先順位は landmark → cnn → stub(`RPS_CLASSIFIER` 環境変数で明示指定も可)。
 
-### CNN 学習 (`backend/training/train.py`)
+- **`LandmarkClassifier`(既定)**: MediaPipe Hands で手の 21 ランドマークを検出し、
+  指の伸展状態からグー/チョキ/パーを幾何学的に判定する。
+  - 手が検出できない画像(顔だけ・背景だけ)は `(None, 0.0)` を返す。
+    **「顔をグーと誤判定する」問題を構造的に排除するのがこの方式の核心。**
+  - 2 段構成に分離し、幾何判定を純関数としてテスト可能にする:
+    - `HandLandmarkDetector`(mediapipe ラッパー、`hand_landmarker.task` モデルを使用)
+    - `rps/landmark_logic.py` の `classify_from_landmarks(landmarks) -> tuple[Hand | None, float]`
+      (純関数。指ごとの伸展判定 → 伸びている指の組合せで手を決定。
+      グー=0〜1本、チョキ=人差し指+中指、パー=4本以上。曖昧なら低 confidence)
+  - モデルファイル `backend/models/hand_landmarker.task` は
+    `backend/scripts/download_models.py` でダウンロード(Google 公式 URL、リポジトリには含めない)。
+  - mediapipe は default dependencies に含める(推論に TF 学習環境は不要)。
+- `CnnClassifier`(レガシー・任意): `backend/models/rps_cnn.keras` があり
+  `RPS_CLASSIFIER=cnn` のときのみ使用。CGI データセット学習のため実カメラ精度は低い。
+- `StubClassifier`: 上記が使えない場合・`RPS_CLASSIFIER=stub` の場合のフォールバック。
+  画像バイト列のハッシュから決定的に手を返す(テストの再現性のため)。
+- **API のテストは stub またはフェイク判定器で実行し、
+  ランドマークモデルファイル・TensorFlow 無しで pytest が通ること**
+  (TF は optional dependency group `[ml]` に分離)。
+  `classify_from_landmarks` は合成ランドマーク座標で純関数として網羅テストする。
+
+### フロントエンドの対応
+
+- `classifierApi.ts`: レスポンス `hand: null` を `NoHandError`(「わくの中に手を出してね」)として
+  throw する。engine の既存エラーリトライ経路(「もういっかい！」)に乗るため engine 変更は不要。
+
+### CNN 学習 (`backend/training/train.py`) — レガシー
 
 - データセット: `tensorflow_datasets` の `rock_paper_scissors` (TF 公式, CGI 手画像 2,892 枚)
 - モデル: MobileNetV2 (ImageNet 重み, include_top=False) + GlobalAveragePooling + Dropout + Dense(3)

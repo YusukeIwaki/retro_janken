@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -12,11 +13,16 @@ import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
+from rps.landmark_logic import Landmark, LandmarkLike, classify_from_landmarks
 from rps.preprocess import IMAGE_HEIGHT, IMAGE_WIDTH, preprocess_image
 from rps.types import CNN_CLASS_NAMES, STUB_HANDS, Hand
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "rps_cnn.keras"
+DEFAULT_LANDMARK_MODEL_PATH = (
+    Path(__file__).resolve().parent.parent / "models" / "hand_landmarker.task"
+)
+LANDMARK_WARMUP_IMAGE_SIZE = (1, 1)
 
 
 @runtime_checkable
@@ -25,8 +31,90 @@ class Classifier(Protocol):
 
     name: str
 
-    def classify(self, image: Image.Image) -> tuple[Hand, float]:
+    def classify(self, image: Image.Image) -> tuple[Hand | None, float]:
         """Return the predicted hand and confidence."""
+
+
+class LandmarkDetector(Protocol):
+    """Image-to-landmarks dependency used by ``LandmarkClassifier``."""
+
+    def detect(self, image: Image.Image) -> Sequence[Landmark] | None:
+        """Return one hand's normalized landmarks, or None when absent."""
+
+
+class _HandLandmarkerResult(Protocol):
+    hand_landmarks: Sequence[Sequence[LandmarkLike]]
+
+
+class _MediaPipeHandLandmarker(Protocol):
+    def detect(self, image: object) -> _HandLandmarkerResult: ...
+
+
+class HandLandmarkDetector:
+    """Lazy MediaPipe HandLandmarker wrapper configured for IMAGE mode."""
+
+    def __init__(self, model_path: Path = DEFAULT_LANDMARK_MODEL_PATH) -> None:
+        if not model_path.is_file():
+            raise FileNotFoundError(f"Hand landmark model not found: {model_path}")
+        self._model_path = model_path
+        self._landmarker: _MediaPipeHandLandmarker | None = None
+
+    def _get_landmarker(self) -> _MediaPipeHandLandmarker:
+        if self._landmarker is None:
+            # Import and task creation are intentionally delayed. Importing this
+            # module therefore never requires a downloaded model file.
+            import mediapipe as mp
+
+            options = mp.tasks.vision.HandLandmarkerOptions(
+                base_options=mp.tasks.BaseOptions(
+                    model_asset_path=str(self._model_path),
+                    delegate=mp.tasks.BaseOptions.Delegate.CPU,
+                ),
+                running_mode=mp.tasks.vision.RunningMode.IMAGE,
+                num_hands=1,
+            )
+            self._landmarker = (
+                mp.tasks.vision.HandLandmarker.create_from_options(options)
+            )
+            LOGGER.info("Loaded MediaPipe hand landmark model from %s", self._model_path)
+        return self._landmarker
+
+    def detect(self, image: Image.Image) -> Sequence[Landmark] | None:
+        import mediapipe as mp
+
+        rgb_data = np.ascontiguousarray(
+            np.asarray(image.convert("RGB"), dtype=np.uint8)
+        )
+        media_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_data)
+        result = self._get_landmarker().detect(media_image)
+        if not result.hand_landmarks:
+            return None
+
+        return tuple(
+            (float(point.x), float(point.y), float(point.z))
+            for point in result.hand_landmarks[0]
+        )
+
+
+class LandmarkClassifier:
+    """Classify a detected hand from MediaPipe's geometric landmarks."""
+
+    name = "landmark"
+
+    def __init__(
+        self,
+        detector: LandmarkDetector | None = None,
+        model_path: Path = DEFAULT_LANDMARK_MODEL_PATH,
+    ) -> None:
+        self._detector = (
+            detector if detector is not None else HandLandmarkDetector(model_path)
+        )
+
+    def classify(self, image: Image.Image) -> tuple[Hand | None, float]:
+        landmarks = self._detector.detect(image)
+        if landmarks is None or len(landmarks) == 0:
+            return None, 0.0
+        return classify_from_landmarks(landmarks)
 
 
 class PredictiveModel(Protocol):
@@ -93,13 +181,37 @@ class CnnClassifier:
 def create_classifier(
     model_path: Path = DEFAULT_MODEL_PATH,
     classifier_setting: str | None = None,
+    landmark_model_path: Path = DEFAULT_LANDMARK_MODEL_PATH,
+    landmark_detector: LandmarkDetector | None = None,
 ) -> Classifier:
-    """Select the configured classifier, falling back safely to the stub."""
+    """Select landmark, CNN, or stub in configured fallback order."""
 
-    setting = (classifier_setting or os.getenv("RPS_CLASSIFIER", "auto")).lower()
+    setting = (
+        classifier_setting or os.getenv("RPS_CLASSIFIER", "auto")
+    ).strip().lower()
+    if setting not in {"auto", "landmark", "cnn", "stub"}:
+        raise ValueError("RPS_CLASSIFIER must be one of: landmark, cnn, stub")
     if setting == "stub":
         LOGGER.info("Using StubClassifier because RPS_CLASSIFIER=stub")
         return StubClassifier()
+
+    if setting in {"auto", "landmark"}:
+        if landmark_detector is not None or landmark_model_path.is_file():
+            try:
+                landmark_classifier = LandmarkClassifier(
+                    detector=landmark_detector,
+                    model_path=landmark_model_path,
+                )
+                warmup_image = Image.new("RGB", LANDMARK_WARMUP_IMAGE_SIZE)
+                landmark_classifier.classify(warmup_image)
+                LOGGER.info("Warmed LandmarkClassifier with an empty image")
+                return landmark_classifier
+            except (ImportError, OSError, RuntimeError, ValueError):
+                LOGGER.exception(
+                    "Landmark initialization failed; trying the next classifier"
+                )
+        else:
+            LOGGER.info("Hand landmark model is absent; trying the next classifier")
 
     if not model_path.is_file():
         LOGGER.info("CNN model is absent; using StubClassifier")

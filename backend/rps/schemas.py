@@ -8,11 +8,11 @@ from rps.types import Hand
 
 
 class ClassifyResponse(BaseModel):
-    hand: Hand
+    hand: Hand | None
     confidence: Annotated[float, Field(ge=0.0, le=1.0)]
     latency_ms: Annotated[float, Field(ge=0.0)]
 
 
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
-    classifier: Literal["cnn", "stub"]
+    classifier: Literal["landmark", "cnn", "stub"]

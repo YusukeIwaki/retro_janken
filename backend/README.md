@@ -1,6 +1,6 @@
 # retro_janken backend
 
-FastAPI で JPEG/PNG の手画像を受け取り、グー・チョキ・パーを判定します。学習済みモデルがない通常の開発環境では、画像内容の SHA-256 に基づく決定的な stub 判定器を使います。
+FastAPI で JPEG/PNG の手画像を受け取り、MediaPipe の手ランドマークからグー・チョキ・パーを判定します。画像内に手がなければ `hand: null` を返すため、顔や背景をグーとして扱いません。
 
 ## セットアップと起動
 
@@ -8,20 +8,27 @@ Python 3.12 と [uv](https://docs.astral.sh/uv/) を使用します。
 
 ```sh
 uv sync
+uv run python scripts/download_models.py
 uv run uvicorn rps.main:app --reload --port 8000
 ```
 
-通常の `uv sync` は API とテストに必要な依存だけを導入し、TensorFlow は導入しません。フロントエンド開発サーバー `http://localhost:5173` からの CORS アクセスを許可しています。
+`download_models.py` は Google 公式の `hand_landmarker.task` を `models/` に保存します。このモデルファイルはリポジトリには含めません。通常の `uv sync` は MediaPipe、API、テストに必要な依存だけを導入し、TensorFlow は導入しません。フロントエンド開発サーバー `http://localhost:5173` からの CORS アクセスを許可しています。
 
-モデルが `models/rps_cnn.keras` にあれば起動時にロードしてウォームアップ推論します。モデルがない場合、または `RPS_CLASSIFIER=stub` を指定した場合は stub にフォールバックします。
+判定器の自動選択順は `landmark` → `cnn` → `stub` です。`models/hand_landmarker.task` があればランドマーク判定器を使い、なければ `models/rps_cnn.keras`、それも利用できなければ画像内容の SHA-256 に基づく決定的な stub 判定器へフォールバックします。MediaPipe の landmarker は最初の判定時に遅延初期化されます。
+
+`RPS_CLASSIFIER` で開始する判定器を明示できます。
 
 ```sh
+RPS_CLASSIFIER=landmark uv run uvicorn rps.main:app --reload --port 8000
+RPS_CLASSIFIER=cnn uv run uvicorn rps.main:app --reload --port 8000
 RPS_CLASSIFIER=stub uv run uvicorn rps.main:app --reload --port 8000
 ```
 
+`landmark` 指定時にランドマークモデルがなければ CNN、`cnn` 指定時に CNN モデルまたは TensorFlow がなければ stub へフォールバックします。
+
 ## テスト
 
-テストは stub を注入するため TensorFlow を必要としません。
+テストは stub またはフェイク判定器を注入するため、ランドマークの実モデルと TensorFlow を必要としません。
 
 ```sh
 uv sync

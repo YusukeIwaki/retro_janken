@@ -16,6 +16,13 @@ export class ClassifierApiError extends Error {
   }
 }
 
+export class NoHandError extends Error {
+  constructor() {
+    super('わくの中に手を出してね');
+    this.name = 'NoHandError';
+  }
+}
+
 export class ClassifierApi implements Classifier {
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
@@ -42,6 +49,9 @@ export class ClassifierApi implements Classifier {
     if (!isClassificationPayload(payload)) {
       throw new ClassifierApiError('判定APIのレスポンス形式が不正です');
     }
+    if (payload.hand === null) {
+      throw new NoHandError();
+    }
 
     return {
       hand: payload.hand,
@@ -52,7 +62,7 @@ export class ClassifierApi implements Classifier {
 }
 
 interface ClassificationPayload {
-  readonly hand: Classification['hand'];
+  readonly hand: Classification['hand'] | null;
   readonly confidence: number;
   readonly latency_ms: number;
 }
@@ -64,7 +74,7 @@ function isClassificationPayload(value: unknown): value is ClassificationPayload
 
   const record = value as Record<string, unknown>;
   return (
-    isHand(record.hand) &&
+    (record.hand === null || isHand(record.hand)) &&
     typeof record.confidence === 'number' &&
     Number.isFinite(record.confidence) &&
     record.confidence >= 0 &&

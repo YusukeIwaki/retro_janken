@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ClassifierApi, ClassifierApiError, type Fetcher } from './classifierApi';
+import {
+  ClassifierApi,
+  ClassifierApiError,
+  NoHandError,
+  type Fetcher,
+} from './classifierApi';
 
 describe('ClassifierApi', () => {
   it('posts a JPEG as multipart data and maps a valid response', async () => {
@@ -22,6 +27,20 @@ describe('ClassifierApi', () => {
     expect(request?.body).toBeInstanceOf(FormData);
     expect((request?.body as FormData).get('image')).toBeInstanceOf(Blob);
     expect(request?.headers).toBeUndefined();
+  });
+
+  it('throws NoHandError when no hand is detected', async () => {
+    const fetcher = vi.fn<Fetcher>(async () =>
+      new Response(
+        JSON.stringify({ hand: null, confidence: 0, latency_ms: 10 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const promise = new ClassifierApi(fetcher).classify(new Blob(['image']));
+
+    await expect(promise).rejects.toBeInstanceOf(NoHandError);
+    await expect(promise).rejects.toThrow('わくの中に手を出してね');
   });
 
   it('surfaces backend error detail and status', async () => {

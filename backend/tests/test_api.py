@@ -3,6 +3,15 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from rps.main import create_app
+
+
+class NoHandClassifier:
+    name = "landmark"
+
+    def classify(self, image: Image.Image) -> tuple[None, float]:
+        return None, 0.0
+
 
 def png_bytes(color: tuple[int, int, int] = (20, 80, 140)) -> bytes:
     buffer = BytesIO()
@@ -38,6 +47,28 @@ def test_classify_rejects_an_invalid_image(client: TestClient) -> None:
 
     assert response.status_code == 400
     assert "detail" in response.json()
+
+
+def test_classify_returns_nullable_hand_when_no_hand_is_detected() -> None:
+    with TestClient(create_app(classifier=NoHandClassifier())) as no_hand_client:
+        response = no_hand_client.post(
+            "/api/classify",
+            files={"image": ("background.png", png_bytes(), "image/png")},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["hand"] is None
+    assert body["confidence"] == 0.0
+    assert body["latency_ms"] >= 0.0
+
+
+def test_health_reports_landmark_classifier() -> None:
+    with TestClient(create_app(classifier=NoHandClassifier())) as landmark_client:
+        response = landmark_client.get("/api/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "classifier": "landmark"}
 
 
 def test_health_reports_stub(client: TestClient) -> None:
