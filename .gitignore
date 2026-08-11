@@ -3,15 +3,18 @@ node_modules/
 dist/
 frontend/playwright-report/
 frontend/test-results/
+frontend/.playwright-browsers/
 frontend/public/audio/*.wav
 
 # Python
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 backend/models/*.keras
 backend/data/
 
 # misc
 .DS_Store
 *.log
+.claude/

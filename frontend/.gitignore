@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.npm-cache/
+.playwright-browsers/
+playwright/.cache/
+playwright-report/
+test-results/
+public/audio/*.wav
