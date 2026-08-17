@@ -115,9 +115,30 @@ describe('GameEngine', () => {
       'idle',
     ]);
     const result = game.history.find((state) => state.phase === 'result');
-    expect(result).toMatchObject({ outcome: 'win', medals: 5, message: 'かった！' });
-    expect(game.medalStore.saved).toEqual([5]);
+    expect(result).toMatchObject({
+      outcome: 'win',
+      medals: 6,
+      payout: 2,
+      payoutIndex: 0,
+      message: 'かった！',
+    });
+    expect(game.medalStore.saved).toEqual([6]);
     expect(game.sound.cues).toEqual(['janken', 'pon', 'win']);
+  });
+
+  it('uses the injected RNG to choose and persist the roulette payout', async () => {
+    const game = setup([{ hand: 'paper', confidence: 0.95 }], [0, 0.8], 4);
+
+    await game.engine.start();
+
+    const result = game.history.find((state) => state.phase === 'result');
+    expect(result).toMatchObject({
+      outcome: 'win',
+      medals: 24,
+      payout: 20,
+      payoutIndex: 9,
+    });
+    expect(game.medalStore.saved).toEqual([24]);
   });
 
   it('loops through aiko directly back to capturing before resolving the game', async () => {

@@ -1,4 +1,5 @@
 import { judge, type Hand, type Outcome } from './judge';
+import { selectRoulette, type RoulettePayout } from './roulette';
 
 export type GamePhase =
   | 'idle'
@@ -15,6 +16,8 @@ export interface GameState {
   readonly playerHand: Hand | null;
   readonly confidence: number | null;
   readonly outcome: Outcome | null;
+  readonly payout: RoulettePayout | null;
+  readonly payoutIndex: number | null;
   readonly message: string;
   readonly retryCount: number;
   readonly error: string | null;
@@ -67,16 +70,20 @@ export type GameEvent =
   | { readonly type: 'CALLING'; readonly message?: string }
   | { readonly type: 'CAPTURE'; readonly machineHand: Hand }
   | { readonly type: 'CLASSIFIED'; readonly classification: Classification }
-  | { readonly type: 'JUDGED'; readonly outcome: Outcome }
+  | {
+      readonly type: 'JUDGED';
+      readonly outcome: Outcome;
+      readonly roulette: ReturnType<typeof selectRoulette> | null;
+    }
   | { readonly type: 'RETRY'; readonly reason: string }
   | { readonly type: 'RESET' }
   | { readonly type: 'CANCEL' };
 
 export const CONFIDENCE_THRESHOLD = 0.6;
-export const CALLING_MINIMUM_MS = 450;
+export const CALLING_MINIMUM_MS = 900;
 export const RETRY_MESSAGE_MS = 650;
 export const JUDGING_MS = 300;
-export const RESULT_DISPLAY_MS = 1_800;
+export const RESULT_DISPLAY_MS = 5_200;
 
 const HANDS: readonly Hand[] = ['rock', 'scissors', 'paper'];
 
@@ -88,6 +95,8 @@ export function createInitialState(medals = 0): GameState {
     playerHand: null,
     confidence: null,
     outcome: null,
+    payout: null,
+    payoutIndex: null,
     message: 'コインをいれてね',
     retryCount: 0,
     error: null,
@@ -107,6 +116,8 @@ export function gameReducer(state: GameState, event: GameEvent): GameState {
         playerHand: null,
         confidence: null,
         outcome: null,
+        payout: null,
+        payoutIndex: null,
         message: 'ジャンケン…',
         retryCount: 0,
         error: null,
@@ -121,6 +132,8 @@ export function gameReducer(state: GameState, event: GameEvent): GameState {
         playerHand: null,
         confidence: null,
         outcome: null,
+        payout: null,
+        payoutIndex: null,
         message: event.message ?? 'ジャンケン…',
       };
     case 'CAPTURE':
@@ -134,6 +147,8 @@ export function gameReducer(state: GameState, event: GameEvent): GameState {
         playerHand: null,
         confidence: null,
         outcome: null,
+        payout: null,
+        payoutIndex: null,
         message: 'ポン！ カメラ判定中',
         error: null,
       };
@@ -157,15 +172,21 @@ export function gameReducer(state: GameState, event: GameEvent): GameState {
           ...state,
           phase: 'aiko',
           outcome: 'draw',
+          payout: null,
+          payoutIndex: null,
           message: 'あいこでしょ！',
         };
       }
-      const wonMedal = event.outcome === 'win' ? 1 : 0;
+      const roulette = event.outcome === 'win'
+        ? (event.roulette ?? selectRoulette(0))
+        : null;
       return {
         ...state,
         phase: 'result',
-        medals: state.medals + wonMedal,
+        medals: state.medals + (roulette?.payout ?? 0),
         outcome: event.outcome,
+        payout: roulette?.payout ?? null,
+        payoutIndex: roulette?.index ?? null,
         message: event.outcome === 'win' ? 'かった！' : 'まけた！',
       };
     }
@@ -180,6 +201,8 @@ export function gameReducer(state: GameState, event: GameEvent): GameState {
         playerHand: null,
         confidence: null,
         outcome: null,
+        payout: null,
+        payoutIndex: null,
         message: 'もういっかい！',
         retryCount: state.retryCount + 1,
         error: event.reason,
@@ -267,7 +290,10 @@ export class GameEngine {
         }
 
         const outcome = judge(classification.hand, machineHand);
-        this.dispatch({ type: 'JUDGED', outcome });
+        const roulette = outcome === 'win'
+          ? selectRoulette(this.dependencies.rng.next())
+          : null;
+        this.dispatch({ type: 'JUDGED', outcome, roulette });
 
         if (outcome === 'draw') {
           await this.safePlay('aiko');

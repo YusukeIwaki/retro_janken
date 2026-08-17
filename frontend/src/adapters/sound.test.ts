@@ -32,7 +32,7 @@ describe('BrowserSoundPlayer', () => {
     await expect(player.play('pon')).resolves.toBeUndefined();
   });
 
-  it('schedules a square-wave jingle for win and closes its context', async () => {
+  it('schedules a slowing roulette tick sequence and landing jingle for win', async () => {
     const frequencies: number[] = [];
     let endedListener: EventListener | null = null;
     const oscillator = {
@@ -76,9 +76,11 @@ describe('BrowserSoundPlayer', () => {
 
     expect(sources).toEqual(['/audio/win.wav']);
     expect(oscillator.type).toBe('square');
-    expect(frequencies).toEqual([523.25, 659.25, 783.99, 1046.5]);
+    expect(frequencies.slice(0, 4)).toEqual([1046.5, 783.99, 1046.5, 783.99]);
+    expect(frequencies.slice(-4)).toEqual([523.25, 659.25, 783.99, 1046.5]);
+    expect(frequencies).toHaveLength(41);
     expect(oscillator.start).toHaveBeenCalledWith(10);
-    expect(oscillator.stop).toHaveBeenCalledWith(10.48);
+    expect(oscillator.stop).toHaveBeenCalledWith(14.8);
     expect(close).toHaveBeenCalledOnce();
   });
 });

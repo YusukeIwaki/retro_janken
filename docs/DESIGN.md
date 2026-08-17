@@ -35,7 +35,7 @@ idle ──(スタート)──> calling ──(掛け声完了)──> capturin
 - `capturing`: 「ポン!」のタイミングでカメラフレームを 1 枚キャプチャし `/api/classify` に POST。
   マシン側の手は乱数で決定(`Math.random` 直接ではなく注入可能な RNG インターフェース経由)。
 - `judging`: ユーザーの手(API 結果)とマシンの手で勝敗判定。
-  - 勝ち: 「かった!」ジングル + メダル加算演出
+  - 勝ち: 「かった!」の後、外周ランプが減速する配当ルーレット(2/4/7/20枚) + メダル加算演出
   - 負け: 「まけた!」ジングル
   - あいこ: 「あいこでしょ!」音声 → 再キャプチャ(`aiko` 経由で `capturing` へループ)
 - API エラー / 低信頼度 (confidence < 0.6) の場合は「もういっかい!」で `calling` からやり直し。
@@ -58,6 +58,7 @@ idle ──(スタート)──> calling ──(掛け声完了)──> capturin
 |---|---|---|
 | `src/game/judge.ts` | 手の型 `Hand = 'rock'\|'scissors'\|'paper'`、勝敗判定の純関数 | vitest |
 | `src/game/engine.ts` | 状態機械 (reducer + 副作用オーケストレーション)。`Camera`/`Classifier`/`SoundPlayer`/`Rng`/`Clock` を注入 | vitest (全依存モック) |
+| `src/game/roulette.ts` | 注入 RNG から配当ルーレットの停止位置と加算枚数を決める純関数 | vitest |
 | `src/adapters/camera.ts` | `getUserMedia` + canvas キャプチャ → JPEG Blob。`Camera` interface 実装 | CT でフェイク、単体は薄いので最小 |
 | `src/adapters/classifierApi.ts` | `/api/classify` クライアント。`Classifier` interface 実装 | vitest (fetch モック) |
 | `src/adapters/sound.ts` | 音声再生。ボイス = `public/audio/*.wav`、ジングル = Web Audio 合成。`SoundPlayer` interface 実装 | vitest (AudioContext モック) |
@@ -72,7 +73,9 @@ idle ──(スタート)──> calling ──(掛け声完了)──> capturin
 - 配色: 黄色い筐体 + 赤 LED 風 7 セグ調フォント。CSS のみで CRT 風スキャンラインを表現。
 - 音声ファイル: `frontend/public/audio/` に `janken.wav` `pon.wav` `aiko.wav` `win.wav` `lose.wav` を配置。
   **プレースホルダは macOS `say` コマンドで生成するスクリプト** `frontend/scripts/generate-voice.sh` を用意し、
-  後から生成 AI 音声に差し替え可能にする(ファイル名契約のみ固定)。
+  「じゃーん、けん」「ぽーん！」と間を取った 16 kHz mono のローファイ音声を作る。
+  後から生成 AI 音声に差し替え可能にする(ファイル名契約のみ固定)。勝利時の減速するルーレット音と
+  着地ジングルは Web Audio で合成する。
   音声ファイルが無くてもゲームは動作すること(再生失敗は握りつぶしてゲーム進行を止めない)。
 
 ### カメラ

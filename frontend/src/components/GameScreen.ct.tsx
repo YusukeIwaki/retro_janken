@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/experimental-ct-react';
 import { CameraErrorHarness, PlayableGameHarness } from './GameScreen.story';
 
-test('plays a complete injected game and awards a medal', async ({ mount }) => {
+test('plays a complete injected game and awards the roulette payout', async ({ mount }) => {
   const component = await mount(<PlayableGameHarness />);
   const start = component.getByRole('button', { name: 'スタート' });
 
@@ -11,7 +11,8 @@ test('plays a complete injected game and awards a medal', async ({ mount }) => {
   await expect(component.getByRole('status')).toHaveText('かった！');
   await expect(component.getByRole('img', { name: 'マシンはグー' })).toBeVisible();
   await expect(component.getByRole('img', { name: 'あなたはパー' })).toBeVisible();
-  await expect(component.getByTestId('medal-count')).toHaveText('003');
+  await expect(component.getByTestId('payout-count')).toHaveText('2');
+  await expect(component.getByTestId('medal-count')).toHaveText('004');
 });
 
 test('shows a camera permission error and prevents starting', async ({ mount }) => {

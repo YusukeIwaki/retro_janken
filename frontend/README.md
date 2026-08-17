@@ -33,13 +33,13 @@ npm run test:ct
 
 ## プレースホルダ音声
 
-ゲームは音声ファイルが存在しなくても進行します。macOS では `say` と `afconvert` を使い、契約済みのファイル名でプレースホルダ WAV を生成できます。
+ゲームは音声ファイルが存在しなくても進行します。macOS では `say` と `afconvert` を使い、契約済みのファイル名でプレースホルダ WAV を生成できます。掛け声は「じゃーん、けん」「ぽーん！」と間を取った、16 kHz mono のローファイなアーケード調です。
 
 ```sh
 ./scripts/generate-voice.sh
 ```
 
-生成先は `public/audio/`、ファイル名は `janken.wav`、`pon.wav`、`aiko.wav`、`win.wav`、`lose.wav` です。WAV は生成物なのでリポジトリには含めず、必要に応じて差し替えてください。
+生成先は `public/audio/`、ファイル名は `janken.wav`、`pon.wav`、`aiko.wav`、`win.wav`、`lose.wav` です。WAV は生成物なのでリポジトリには含めず、必要に応じて差し替えてください。勝利時は Web Audio で減速するルーレット音と着地ジングルも重ねます。
 
 ## 構成
 

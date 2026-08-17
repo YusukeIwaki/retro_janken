@@ -23,14 +23,17 @@ mkdir -p "$output_dir"
 generate_voice() {
   name=$1
   phrase=$2
-  say -v Kyoko -r 190 -o "$voice_temp_dir/$name.aiff" "$phrase"
-  afconvert -f WAVE -d LEI16@22050 "$voice_temp_dir/$name.aiff" "$output_dir/$name.wav"
+  rate=$3
+  say -v Kyoko -r "$rate" -o "$voice_temp_dir/$name.aiff" "$phrase"
+  # 16 kHz mono keeps the deliberately narrow, slightly mechanical arcade tone.
+  afconvert -f WAVE -d LEI16@16000 -c 1 \
+    "$voice_temp_dir/$name.aiff" "$output_dir/$name.wav"
 }
 
-generate_voice janken "じゃんけん"
-generate_voice pon "ぽん"
-generate_voice aiko "あいこでしょ"
-generate_voice win "かった"
-generate_voice lose "まけた"
+generate_voice janken "じゃーん、けん" 160
+generate_voice pon "ぽーん！" 150
+generate_voice aiko "あーいこで、しょ！" 170
+generate_voice win "かったあ！" 170
+generate_voice lose "まけちゃった" 175
 
 echo "Generated placeholder WAV files in $output_dir"

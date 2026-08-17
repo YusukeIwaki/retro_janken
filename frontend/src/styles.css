@@ -329,18 +329,181 @@ input {
   border: 6px solid #fff7d0;
   border-radius: 9px;
   background:
-    radial-gradient(circle, transparent 0 43%, #b82b20 44% 47%, transparent 48%),
-    repeating-conic-gradient(from -8deg, #f5c92f 0 10deg, #d83a26 10deg 20deg);
+    radial-gradient(circle, transparent 0 48%, rgb(116 13 9 / 54%) 49% 56%, transparent 57%),
+    repeating-conic-gradient(from -15deg, #f5c92f 0 15deg, #d83a26 15deg 30deg);
   box-shadow: 0 0 0 4px #c43627, inset 0 0 0 4px #e64a32, 0 3px 0 #7e281e;
 }
 
 .machine-panel__burst::before {
   position: absolute;
-  inset: 24px;
-  border: 4px dashed #fff0a0;
+  inset: 12px;
+  border: 3px solid rgb(255 247 170 / 72%);
   border-radius: 50%;
   content: "";
-  opacity: 0.8;
+  box-shadow: inset 0 0 28px rgb(79 9 5 / 62%);
+  opacity: 0.9;
+}
+
+.machine-panel[data-outcome="win"] .machine-panel__burst {
+  animation: winner-panel-flash 520ms steps(2, end) 8;
+}
+
+@keyframes winner-panel-flash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35) saturate(1.18); }
+}
+
+.roulette-wheel {
+  --roulette-radius: 124px;
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: 278px;
+  height: 278px;
+  border: 5px solid #8e2118;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 40%, #f6d64a 40.5% 43%, #8e2018 43.5% 48%, transparent 48.5%),
+    repeating-conic-gradient(from -15deg, rgb(255 244 135 / 30%) 0 2deg, transparent 2deg 30deg);
+  box-shadow:
+    0 0 0 3px #f9df61,
+    inset 0 0 20px rgb(76 8 5 / 66%),
+    0 0 12px rgb(116 18 9 / 48%);
+  transform: translate(-50%, -50%);
+}
+
+.roulette-wheel__slots {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.roulette-wheel__slot {
+  display: grid;
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 31px;
+  border: 2px solid #8d2018;
+  border-radius: 7px 7px 13px 13px;
+  color: #862017;
+  background: linear-gradient(#fff4a6, #eeba2d);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 38%), 0 2px 0 #6e160f;
+  font-family: "Courier New", monospace;
+  font-size: 0.82rem;
+  font-weight: 1000;
+  place-items: center;
+  text-shadow: 1px 1px 0 #fff390;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--roulette-angle))
+    translateY(calc(-1 * var(--roulette-radius)))
+    rotate(var(--roulette-label-angle));
+}
+
+.roulette-wheel__slot::before {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a82b20;
+  box-shadow: 28px 0 0 #a82b20;
+  content: "";
+}
+
+.roulette-wheel__slot--selected {
+  animation: roulette-prize 4.2s steps(1, end) forwards;
+}
+
+.roulette-wheel__runner {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: 50%;
+  animation:
+    roulette-spin 3.7s step-end 450ms both,
+    roulette-runner-light 4.2s linear forwards;
+}
+
+.roulette-wheel__runner::before {
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  width: 48px;
+  height: 40px;
+  clip-path: polygon(18% 0, 82% 0, 100% 100%, 0 100%);
+  background: linear-gradient(#fffbd0, #ff4b22 35%, #d4150b 78%);
+  box-shadow: 0 0 13px 5px #ff2a16, inset 0 0 7px #fff8a2;
+  content: "";
+  opacity: 0.94;
+  transform: translateX(-50%);
+}
+
+@keyframes roulette-spin {
+  0% { transform: rotate(var(--roulette-stop-angle)); }
+  1.35% { transform: rotate(calc(var(--roulette-stop-angle) + 30deg)); }
+  2.7% { transform: rotate(calc(var(--roulette-stop-angle) + 60deg)); }
+  4.05% { transform: rotate(calc(var(--roulette-stop-angle) + 90deg)); }
+  5.41% { transform: rotate(calc(var(--roulette-stop-angle) + 120deg)); }
+  6.76% { transform: rotate(calc(var(--roulette-stop-angle) + 150deg)); }
+  8.11% { transform: rotate(calc(var(--roulette-stop-angle) + 180deg)); }
+  9.46% { transform: rotate(calc(var(--roulette-stop-angle) + 210deg)); }
+  10.81% { transform: rotate(calc(var(--roulette-stop-angle) + 240deg)); }
+  12.16% { transform: rotate(calc(var(--roulette-stop-angle) + 270deg)); }
+  13.51% { transform: rotate(calc(var(--roulette-stop-angle) + 300deg)); }
+  14.86% { transform: rotate(calc(var(--roulette-stop-angle) + 330deg)); }
+  16.22% { transform: rotate(calc(var(--roulette-stop-angle) + 360deg)); }
+  17.57% { transform: rotate(calc(var(--roulette-stop-angle) + 390deg)); }
+  18.92% { transform: rotate(calc(var(--roulette-stop-angle) + 420deg)); }
+  20.27% { transform: rotate(calc(var(--roulette-stop-angle) + 450deg)); }
+  21.62% { transform: rotate(calc(var(--roulette-stop-angle) + 480deg)); }
+  22.97% { transform: rotate(calc(var(--roulette-stop-angle) + 510deg)); }
+  24.32% { transform: rotate(calc(var(--roulette-stop-angle) + 540deg)); }
+  26.76% { transform: rotate(calc(var(--roulette-stop-angle) + 570deg)); }
+  29.19% { transform: rotate(calc(var(--roulette-stop-angle) + 600deg)); }
+  31.62% { transform: rotate(calc(var(--roulette-stop-angle) + 630deg)); }
+  34.05% { transform: rotate(calc(var(--roulette-stop-angle) + 660deg)); }
+  36.49% { transform: rotate(calc(var(--roulette-stop-angle) + 690deg)); }
+  38.92% { transform: rotate(calc(var(--roulette-stop-angle) + 720deg)); }
+  41.35% { transform: rotate(calc(var(--roulette-stop-angle) + 750deg)); }
+  43.78% { transform: rotate(calc(var(--roulette-stop-angle) + 780deg)); }
+  48.11% { transform: rotate(calc(var(--roulette-stop-angle) + 810deg)); }
+  52.43% { transform: rotate(calc(var(--roulette-stop-angle) + 840deg)); }
+  56.76% { transform: rotate(calc(var(--roulette-stop-angle) + 870deg)); }
+  61.08% { transform: rotate(calc(var(--roulette-stop-angle) + 900deg)); }
+  65.41% { transform: rotate(calc(var(--roulette-stop-angle) + 930deg)); }
+  69.73% { transform: rotate(calc(var(--roulette-stop-angle) + 960deg)); }
+  77.3% { transform: rotate(calc(var(--roulette-stop-angle) + 990deg)); }
+  84.86% { transform: rotate(calc(var(--roulette-stop-angle) + 1020deg)); }
+  92.43% { transform: rotate(calc(var(--roulette-stop-angle) + 1050deg)); }
+  100% { transform: rotate(calc(var(--roulette-stop-angle) + 1080deg)); }
+}
+
+@keyframes roulette-runner-light {
+  0%, 98% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes roulette-prize {
+  0%, 98% {
+    color: #862017;
+    background: linear-gradient(#fff4a6, #eeba2d);
+    box-shadow: inset 0 0 0 2px rgb(255 255 255 / 38%), 0 2px 0 #6e160f;
+  }
+  100% {
+    color: #fffbd0;
+    background: linear-gradient(#ff7757, #d82116);
+    box-shadow:
+      inset 0 0 10px #fff59c,
+      0 0 7px 3px #ffef56,
+      0 0 18px 8px #ff2d19;
+    text-shadow: 0 0 4px #fff, 0 0 9px #ffe96a;
+  }
 }
 
 .machine-panel__hand-window {
@@ -399,64 +562,6 @@ input {
   0%, 32% { opacity: 1; transform: scale(1); }
   33%, 100% { opacity: 0; transform: scale(0.92); }
 }
-
-.machine-panel__callout {
-  display: flex;
-  position: absolute;
-  z-index: 2;
-  align-items: center;
-  width: 90px;
-  padding: 4px 6px;
-  border: 3px solid #a52a1f;
-  border-radius: 48% 52% 47% 53%;
-  color: #c62f22;
-  background: #fff9dd;
-  box-shadow: 2px 2px 0 #8f281e;
-  font-size: 0.66rem;
-  font-weight: 1000;
-  gap: 2px;
-}
-
-.machine-panel__callout .hand-sprite {
-  flex: 0 0 auto;
-  filter: none;
-}
-
-.machine-panel__callout .hand-sprite__pixels { fill: #d23a2a; }
-.machine-panel__callout .hand-sprite__shadow { fill: #f1b92b; }
-
-.machine-panel__callout--paper { top: 13px; left: 15px; transform: rotate(-7deg); }
-.machine-panel__callout--rock { bottom: 14px; left: 13px; transform: rotate(5deg); }
-.machine-panel__callout--scissors { right: 11px; bottom: 17px; transform: rotate(-5deg); }
-
-.machine-panel__jackpot-ring {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  left: 50%;
-  width: 238px;
-  height: 238px;
-  border: 12px dotted #7f211b;
-  border-radius: 50%;
-  color: #7d1f19;
-  font-family: "Courier New", monospace;
-  font-size: 0.62rem;
-  font-weight: 1000;
-  transform: translate(-50%, -50%);
-}
-
-.machine-panel__jackpot-ring span {
-  position: absolute;
-  bottom: -3px;
-}
-
-.machine-panel__jackpot-ring span:nth-child(1) { left: 48px; transform: rotate(24deg); }
-.machine-panel__jackpot-ring span:nth-child(2) { left: 68px; transform: rotate(17deg); }
-.machine-panel__jackpot-ring span:nth-child(3) { left: 90px; transform: rotate(7deg); }
-.machine-panel__jackpot-ring span:nth-child(4) { left: 112px; }
-.machine-panel__jackpot-ring span:nth-child(5) { left: 134px; transform: rotate(-7deg); }
-.machine-panel__jackpot-ring span:nth-child(6) { left: 156px; transform: rotate(-17deg); }
-.machine-panel__jackpot-ring span:nth-child(7) { left: 178px; transform: rotate(-24deg); }
 
 .led-display {
   min-height: 50px;
@@ -875,14 +980,16 @@ input {
     height: 148px;
   }
 
-  .machine-panel__jackpot-ring {
-    width: 220px;
-    height: 220px;
+  .roulette-wheel {
+    --roulette-radius: 112px;
+    width: 252px;
+    height: 252px;
   }
 
-  .machine-panel__callout {
-    width: 77px;
-    padding: 2px;
+  .roulette-wheel__slot {
+    width: 38px;
+    height: 29px;
+    font-size: 0.74rem;
   }
 
   .led-display {
@@ -908,7 +1015,14 @@ input {
   .cabinet-beacon__light::after,
   .machine-panel__cycle-hand,
   .machine-panel[data-outcome="win"] .result-lamp--win,
-  .machine-panel[data-outcome="win"] .payout-lamp {
+  .machine-panel[data-outcome="win"] .payout-lamp,
+  .machine-panel[data-outcome="win"] .machine-panel__burst {
     animation-duration: 1.8s;
+  }
+
+  .roulette-wheel__runner,
+  .roulette-wheel__slot--selected {
+    animation-delay: 0ms;
+    animation-duration: 1ms;
   }
 }

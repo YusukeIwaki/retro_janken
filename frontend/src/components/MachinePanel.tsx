@@ -1,5 +1,7 @@
+import type { CSSProperties } from 'react';
 import type { GameState } from '../game/engine';
 import type { Hand } from '../game/judge';
+import { ROULETTE_PAYOUTS } from '../game/roulette';
 import { HandSprite } from './HandSprite';
 
 interface MachinePanelProps {
@@ -11,6 +13,12 @@ const HANDS: readonly Hand[] = ['rock', 'scissors', 'paper'];
 export function MachinePanel({ state }: MachinePanelProps) {
   const isCycling = state.phase === 'calling';
   const shownHand = state.machineHand ?? 'rock';
+  const isWinning = state.phase === 'result' && state.outcome === 'win';
+  const payoutIndex = state.payoutIndex ?? 0;
+  const stopAngle = payoutIndex * (360 / ROULETTE_PAYOUTS.length);
+  const rouletteStyle = {
+    '--roulette-stop-angle': `${stopAngle}deg`,
+  } as CSSProperties;
 
   return (
     <section
@@ -21,26 +29,44 @@ export function MachinePanel({ state }: MachinePanelProps) {
       <div className="machine-panel__display">
         <div className="machine-panel__result-lamps" aria-hidden="true">
           <span className="result-lamp result-lamp--win">かち</span>
-          <span className="payout-lamp">2</span>
+          <span
+            aria-label={state.payout === null ? '配当 未決定' : `配当 ${state.payout}枚`}
+            className="payout-lamp"
+            data-testid="payout-count"
+          >
+            {state.payout ?? '—'}
+          </span>
           <span className="result-lamp result-lamp--lose">まけ</span>
         </div>
 
         <div className="machine-panel__burst">
-          <div className="machine-panel__callout machine-panel__callout--paper" aria-hidden="true">
-            <HandSprite decorative hand="paper" size={42} />
-            <span>パー</span>
-          </div>
-          <div className="machine-panel__callout machine-panel__callout--rock" aria-hidden="true">
-            <HandSprite decorative hand="rock" size={42} />
-            <span>グー</span>
-          </div>
-          <div className="machine-panel__callout machine-panel__callout--scissors" aria-hidden="true">
-            <HandSprite decorative hand="scissors" size={42} />
-            <span>チョキ</span>
-          </div>
+          <div
+            aria-label={isWinning ? `配当ルーレット、${state.payout ?? 2}枚に決定` : '配当ルーレット'}
+            className="roulette-wheel"
+            role="img"
+            style={rouletteStyle}
+          >
+            <div aria-hidden="true" className="roulette-wheel__slots">
+              {ROULETTE_PAYOUTS.map((payout, index) => {
+                const angle = index * (360 / ROULETTE_PAYOUTS.length);
+                const slotStyle = {
+                  '--roulette-angle': `${angle}deg`,
+                  '--roulette-label-angle': `${-angle}deg`,
+                } as CSSProperties;
+                const selected = isWinning && index === payoutIndex;
 
-          <div className="machine-panel__jackpot-ring" aria-hidden="true">
-            <span>J</span><span>A</span><span>C</span><span>K</span><span>P</span><span>O</span><span>T</span>
+                return (
+                  <span
+                    className={`roulette-wheel__slot${selected ? ' roulette-wheel__slot--selected' : ''}`}
+                    key={`${payout}-${index}`}
+                    style={slotStyle}
+                  >
+                    {payout}
+                  </span>
+                );
+              })}
+              {isWinning && <span className="roulette-wheel__runner" />}
+            </div>
           </div>
 
           <div className="machine-panel__hand-window">
